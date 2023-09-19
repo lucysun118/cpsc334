@@ -1,0 +1,9 @@
+#!/bin/bash
+
+DIR="/home/student334/cpsc334/"
+test_filename="test_scp"
+
+
+scp ~/cpsc334/ip.md lucysun@172.26.107.160:Desktop/cpsc334
+
+./bashrc_scp

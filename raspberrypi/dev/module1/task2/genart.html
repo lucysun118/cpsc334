@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+</head>
+<body>
+  <script>
+
+let circles = [];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noStroke();
+  frameRate(30);
+}
+
+function draw() {
+  background(0, 10); // Add a slight background fade
+
+  // Create a new circle each frame and add it to the array
+  let c = new Circle(random(width), height + 100);
+  circles.push(c);
+
+  // Loop through the circles array and update and display each circle
+  for (let i = circles.length - 1; i >= 0; i--) {
+    circles[i].update();
+    circles[i].display();
+
+    // Remove circles that are no longer visible to save memory
+    if (circles[i].transparency <= 0) {
+      circles.splice(i, 1);
+    }
+  }
+}
+
+class Circle {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.size = random(10, 50);
+    this.transparency = 255; // Initial transparency
+    this.color = color(random(100, 255), random(100, 255), random(100, 255));
+  }
+
+  update() {
+    this.y -= random(1, 3); // Move the circle upwards
+    this.transparency -= 1; // Reduce transparency
+
+    // Create a gradient effect with transparency
+    fill(this.color.levels[0], this.color.levels[1], this.color.levels[2], this.transparency);
+  }
+
+  display() {
+    // Draw the circle
+    ellipse(this.x, this.y, this.size, this.size);
+  }
+}
+
+// Resize canvas when the window is resized
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+
+  </script>
+</body>
+</html>
+
