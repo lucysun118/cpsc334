@@ -1,0 +1,59 @@
+Installed arduino IDE onto laptop
+Arduino IDE->settings->preferences->additional board manager urls
+Copy pasted: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+Tools → boards→ board manager
+Esp32 by essif
+Tools → boards → esp32→ esp32 dev module
+Tools → port → cu.serial
+File → examples → esp32 → hall sensor
+Connecting with PI:
+Ssh into via laptop 
+Dialout check
+Plugged esp32 into pi type A
+In terminal: ls /dev/tty*
+Found which one was the esp32: /dev/ttyUSB0
+Program w joystick: analog input:
+https://esp32io.com/tutorials/esp32-joystick 
+Connected joystick via wires to the esp32
+Connected esp32 to laptop
+Uploaded and compiled the code
+Checked out with serial monitor
+For the python code, used pyserial to read input from esp32 when it was connected to pi - code in joystick_esp32.py
+Very helpful link for reading input from esp32: https://www.instructables.com/Python-Serial-Port-Communication-Between-PC-and-Ar/
+  GNU nano 5.4                       esp32_arduino.py                                 
+import serial
+
+
+ser = serial.Serial('/dev/ttyUSB0')  # open serial port
+
+
+while True:
+        receivedString = ser.readline()[:-2]
+        receivedString = str(receivedString,'utf-8')
+        print(receivedString)
+
+
+Debugging
+Printing out the Serial.println / Serial.write input from the ESP via the input devices without line break and random characters: added the line to the python file before printing it: “receivedString = str(receivedString,'utf-8')”
+Program with button: digital input
+https://esp32io.com/tutorials/esp32-button
+Connected button via wires to esp32
+Connected esp32 to laptop
+Uploaded and compiled the code
+Checked out press and release events with serial monitor
+When connected to pi, used the same script as last time - and it worked!
+Debugging
+Used wires instead of breadboard to connect button to ESP32 using a mapping of pins diagram linked here^
+Program with switch: digital input
+https://esp32io.com/tutorials/esp32-switch 
+Connected switch via wires to esp32
+Connected esp32 to laptop
+Uploaded and compiled the code
+Checked out press and release events with serial monitor
+When connected to pi, used the same script as last time - and it worked!
+Debugging
+Didn’t really run into any problems - just realized that i couldn’t use GPIO17 as suggested by the esp32io.com source because it was already taken up by the joystick
+So i just used GPIO16 after consulting the diagram
+Combining the 3 input devices into one .ino Arduino script:
+Just copy and pasted the script into one and flashed to the raspberry pi
+Final script combining all 3 inputs is under “final_arduino_joystick_button_switch.ino” in the same directory
