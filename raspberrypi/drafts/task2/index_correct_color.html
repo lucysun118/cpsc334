@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Street View Pegman Control</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            height: 30%;
+            width: 100%;
+        }
+
+        #directions {
+            margin-top: 20px;
+        }
+
+        #street-view-container {
+            position: relative;
+            height: 70%;
+            width: 100%;
+            opacity: 65%;
+        }
+
+        #street-view {
+            height: 100%;
+            width: 100%;
+            opacity: 65%;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: blue; /* Starting color is blue */
+        }
+
+        @media (max-width: 768px) {
+            #map {
+                height: 50%;
+            }
+
+            #street-view-container {
+                height: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <label for="start">Starting Point (A):</label>
+        <input type="text" id="start" placeholder="Enter starting address">
+        <br>
+        <label for="end">Destination (B):</label>
+        <input type="text" id="end" placeholder="Enter destination address">
+        <br>
+        <button onclick="calculateRoute()">Calculate Route</button>
+    </div>
+    <div id="map"></div>
+    <div id="directions"></div>
+    <div id="street-view-container">
+        <div id="overlay"></div>
+        <div id="street-view"></div>
+    </div>
+    <script>
+        var map, directionsService, directionsRenderer, streetViewService, streetViewPanorama;
+        var destinationLatLng;
+        var overlay = document.getElementById('overlay');
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 40.7128, lng: -74.0060 }, // Set the initial map center
+                zoom: 15 // Set the initial zoom level
+            });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+
+            streetViewService = new google.maps.StreetViewService();
+
+            streetViewPanorama = new google.maps.StreetViewPanorama(
+                document.getElementById('street-view'), {
+                    position: { lat: 40.7128, lng: -74.0060 },
+                    pov: {
+                        heading: 0,
+                        pitch: 0
+                    }
+                }
+            );
+
+            map.setStreetView(streetViewPanorama);
+
+            // Set up Street View panorama change event listener
+            google.maps.event.addListener(streetViewPanorama, 'position_changed', updateStreetViewColor);
+        }
+
+
+        function calculateRoute() {
+            var start = document.getElementById('start').value;
+            var end = document.getElementById('end').value;
+
+            var request = {
+                origin: start,
+                destination: end,
+                travelMode: google.maps.TravelMode.DRIVING
+            };
+
+            directionsService.route(request, function (result, status) {
+                if (status == google.maps.DirectionsStatus.OK) {
+                    // Set the route on the map
+                    directionsRenderer.setDirections(result);
+
+                    // Show Street View at the destination
+                    destinationLatLng = result.routes[0].legs[0].end_location;
+                    showStreetView(destinationLatLng);
+
+                    // Calculate the distance to the destination
+                    var currentPosition = streetViewPanorama.getPosition();
+                    var distanceToDestination = google.maps.geometry.spherical.computeDistanceBetween(currentPosition, destinationLatLng);
+
+                    // Update Street View color based on distance
+                    updateStreetViewColor(distanceToDestination);
+                } else {
+                    alert('Directions request failed: ' + status);
+                }
+            });
+        }
+
+
+        function showStreetView(latLng) {
+            streetViewPanorama.setPosition(latLng);
+        }
+
+        function updateStreetViewColor(distanceToDestination) {
+            console.log('got to updateStreetViewColor')
+            var maxDistance = 200; // Adjust this value as needed
+
+            // Calculate the color based on the gradient (blue to red)
+            var r = Math.round(255 * (1 - (distanceToDestination / maxDistance)));
+            var b = Math.round(255 * (distanceToDestination / maxDistance));
+
+            // Set the background color of the Street View panorama container
+            var container = document.getElementById('overlay');
+            container.style.backgroundColor = "rgb(" + r + ", 0, " + b + ")";
+        }
+
+        // New function to handle arrow key navigation
+        function navigateStreetView(direction) {
+            var currentPosition = streetViewPanorama.getPosition();
+            var currentHeading = streetViewPanorama.getPov().heading;
+
+            // Calculate the new position based on the direction
+            var stepSize = 0.00001; // Adjust this value as needed
+            var newPosition = google.maps.geometry.spherical.computeOffset(currentPosition, stepSize, currentHeading + direction);
+
+            // Set the new position in Street View
+            streetViewPanorama.setPosition(newPosition);
+
+            // Calculate the distance to the destination
+            var currentPosition = streetViewPanorama.getPosition();
+            var distanceToDestination = google.maps.geometry.spherical.computeDistanceBetween(currentPosition, destinationLatLng);
+
+            // Update Street View color based on distance
+            updateStreetViewColor(distanceToDestination);
+        }
+
+        // Event listener for arrow key navigation
+        document.addEventListener('keydown', function (event) {
+            switch (event.key) {
+                case "ArrowUp":
+                    navigateStreetView(0); // Move forward
+                    break;
+                case "ArrowDown":
+                    navigateStreetView(180); // Move backward
+                    break;
+                case "ArrowLeft":
+                    navigateStreetView(-90); // Turn left
+                    break;
+                case "ArrowRight":
+                    navigateStreetView(90); // Turn right
+                    break;
+            }
+        });
+    </script>
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDaCxWeASYDGaSIRUiJEB0I-QUR_q0X7OQ&callback=initMap&libraries=places" async defer></script>
+</body>
+</html>

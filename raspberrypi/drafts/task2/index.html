@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Street View Pegman Control</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            height: 30%;
+            width: 100%;
+        }
+
+        #directions {
+            margin-top: 20px;
+        }
+
+        #street-view-container {
+            position: relative;
+            height: 70%;
+            width: 100%;
+            opacity: 65%;
+        }
+
+        #street-view {
+            height: 100%;
+            width: 100%;
+            opacity: 65%;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: blue; /* Starting color is blue */
+        }
+
+        @media (max-width: 768px) {
+            #map {
+                height: 50%;
+            }
+
+            #street-view-container {
+                height: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <label for="start">Starting Point (A):</label>
+        <input type="text" id="start" placeholder="Enter starting address">
+        <br>
+        <label for="end">Destination (B):</label>
+        <input type="text" id="end" placeholder="Enter destination address">
+        <br>
+        <button onclick="calculateRoute()">Calculate Route</button>
+    </div>
+    <div id="map"></div>
+    <div id="directions"></div>
+    <div id="street-view-container">
+        <div id="overlay"></div>
+        <div id="street-view"></div>
+    </div>
+    <script>
+        var map, directionsService, directionsRenderer, streetViewService, streetViewPanorama;
+        var destinationLatLng;
+        var overlay = document.getElementById('overlay');
+        var socket; // WebSocket object
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 40.7128, lng: -74.0060 }, // Set the initial map center
+                zoom: 15 // Set the initial zoom level
+            });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+
+            streetViewService = new google.maps.StreetViewService();
+
+            streetViewPanorama = new google.maps.StreetViewPanorama(
+                document.getElementById('street-view'), {
+                    position: { lat: 40.7128, lng: -74.0060 },
+                    pov: {
+                        heading: 0,
+                        pitch: 0
+                    }
+                }
+            );
+
+            map.setStreetView(streetViewPanorama);
+
+            // Set up Street View panorama change event listener
+            google.maps.event.addListener(streetViewPanorama, 'position_changed', updateOverlayOpacity);
+
+            // Initialize WebSocket when the page loads
+            initWebSocket();
+        }
+
+        function updateStreetViewColor(distanceToDestination) {
+            var maxDistance = 200; // Adjust this value as needed
+
+            // Normalize the distance to a value between 0 and 1
+            var normalizedDistance = Math.min(1, distanceToDestination / maxDistance);
+
+            // Calculate the color based on the gradient (blue to red)
+            var r = Math.round(255 * (1 - normalizedDistance)); // Red component
+            var g = 0; // Green component (constant at 0)
+            var b = Math.round(255 * normalizedDistance); // Blue component
+
+            // Set the background color of the Street View panorama container
+            var container = document.getElementById('overlay');
+            container.style.backgroundColor = "rgb(" + r + ", " + g + ", " + b + ")";
+        }
+
+        function calculateRoute() {
+            var start = document.getElementById('start').value;
+            var end = document.getElementById('end').value;
+
+            var request = {
+                origin: start,
+                destination: end,
+                travelMode: google.maps.TravelMode.DRIVING
+            };
+
+            directionsService.route(request, function (result, status) {
+                if (status == google.maps.DirectionsStatus.OK) {
+                    // Set the route on the map
+                    directionsRenderer.setDirections(result);
+
+                    // Show Street View at the starting point (A)
+                    var startLatLng = result.routes[0].legs[0].start_location;
+                    showStreetView(startLatLng);
+
+                    // Calculate the distance to the destination
+                    var currentPosition = streetViewPanorama.getPosition();
+                    var distanceToDestination = google.maps.geometry.spherical.computeDistanceBetween(currentPosition, startLatLng);
+
+                    // Update Street View color based on distance
+                    updateStreetViewColor(distanceToDestination);
+                } else {
+                    alert('Directions request failed: ' + status);
+                }
+            });
+        }
+
+        function showStreetView(latLng) {
+            streetViewPanorama.setPosition(latLng);
+        }
+
+        function initWebSocket() {
+            // Create a WebSocket connection to the ESP32 server
+            socket = new WebSocket("ws://ESP32_IP_ADDRESS");
+
+            // Set up WebSocket event handlers
+            socket.onopen = function(event) {
+                console.log("WebSocket connection opened.");
+            };
+
+            socket.onmessage = function(event) {
+                // Handle messages received from the ESP32 (e.g., joystick commands)
+                var receivedData = event.data;
+                // Process received data as needed...
+            };
+
+            socket.onclose = function(event) {
+                console.log("WebSocket connection closed.");
+            };
+        }
+
+        // Function to send joystick direction commands to the ESP32
+        function sendJoystickCommand(direction) {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(direction);
+            }
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDaCxWeASYDGaSIRUiJEB0I-QUR_q0X7OQ&callback=initMap&libraries=places" async defer></script>
+</body>
+</html>
